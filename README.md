@@ -65,7 +65,7 @@ Some api request and response for this project. Here are some examples
 ### [1] Dependency Injection
 Using IRepositoryFactory to resolve repositories dynamically can be seen as a pragmatic approach to avoid manually managing repository instances.
 
-### [2] Single Responsibility Principle (SRP)
+### [2] Single Responsibility Principle
 The UnitOfWork class should manage the database context and coordinate transactions. By resolving repositories dynamically from the repository factory.
 
 ### [3] Explicit Dependencies Principle

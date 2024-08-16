@@ -29,8 +29,11 @@ public class PostgreSqlDbContext : DbContext, IDbContext
 
     public DbSet<T> GetDbSet<T>() where T : class, IEntity
     {
-        return Set<T>();
+        return base.Set<T>();
     }
 
-    public override void Dispose() => base.Dispose();
+    public override void Dispose()
+    {
+        base.Dispose();
+    }
 }

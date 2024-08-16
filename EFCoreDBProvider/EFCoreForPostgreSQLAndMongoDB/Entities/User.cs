@@ -14,7 +14,7 @@ public class User : IEntity
     [BsonElement("address")]
     public Address? Address { get; set; }
 
-    [BsonElement("phoneNumbers")]
+    [BsonElement("contacts")]
     public List<Phone>? Contacts { get; set; }
 }
 

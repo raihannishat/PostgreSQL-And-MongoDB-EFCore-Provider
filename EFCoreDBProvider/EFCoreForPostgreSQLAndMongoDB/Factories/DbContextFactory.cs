@@ -3,20 +3,23 @@
 public class DbContextFactory : IDbContextFactory
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly IConfiguration _configuration;
+    private readonly ContextSettings _contextSettings;
 
-    public DbContextFactory(IServiceProvider serviceProvider, IConfiguration configuration)
+    public DbContextFactory(IServiceProvider serviceProvider, IOptions<ContextSettings> contextSettings)
     {
         _serviceProvider = serviceProvider;
-        _configuration = configuration;
+        _contextSettings = contextSettings.Value;
     }
 
     public IDbContext GetDbContext()
     {
-        return _configuration.GetValue<bool>("UseMongoDb") switch
+        var useDbContext = _contextSettings.UseDbContext?.ToLowerInvariant();
+
+        return useDbContext switch
         {
-            true => _serviceProvider.GetRequiredService<MongoDbContext>(),
-            false => _serviceProvider.GetRequiredService<PostgreSqlDbContext>(),
+            "mongo" => _serviceProvider.GetRequiredService<MongoDbContext>(),
+            "pgsql" => _serviceProvider.GetRequiredService<PostgreSqlDbContext>(),
+            _ => _serviceProvider.GetRequiredService<InMemoryDbContext>()
         };
     }
 }

@@ -12,6 +12,9 @@ global using EFCoreForPostgreSQLAndMongoDB.Settings;
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
+// ASP.NET Core Namespaces
+global using Microsoft.Extensions.Options;
+
 // MongoDB Namespaces
 global using MongoDB.Bson;
 global using MongoDB.Bson.Serialization.Attributes;

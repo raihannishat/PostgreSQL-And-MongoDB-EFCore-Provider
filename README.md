@@ -63,7 +63,7 @@ Some api request and response for this project. Here are some examples
 
 ## OOP Principles and Considerations
 ### [1] Dependency Injection
-Using IServiceProvider to resolve repositories dynamically can be seen as a pragmatic approach to avoid manually managing repository instances.
+Using IRepositoryFactory to resolve repositories dynamically can be seen as a pragmatic approach to avoid manually managing repository instances.
 
 ### [2] Single Responsibility Principle (SRP)
 The UnitOfWork class should manage the database context and coordinate transactions. By resolving repositories dynamically from the repository factory.
@@ -82,7 +82,7 @@ The UnitOfWork pattern is designed to maintain a list of objects affected by a b
 Since those repositories don't need explicit disposal, simply clearing the _repositories dictionary as you currently do is sufficient.
 
 ### [2] Disposing the DbContext
-_context.DisposeConnection(); is correctly used to dispose of the database context's connection.
+_context.Dispose(); is correctly used to dispose of the database context's connection.
 
 ### [3] Suppressing Finalization
 GC.SuppressFinalize(this); is correctly used to prevent the finalizer from running since the cleanup is already handled.

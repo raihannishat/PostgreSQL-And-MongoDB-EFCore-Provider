@@ -7,28 +7,28 @@ public static class ServiceExtensions
         // Register settings for context settings
         services.Configure<ContextSettings>(builder.Configuration.GetSection(typeof(ContextSettings).Name));
 
-        // Register settings for in-memory context
-        var inMemorySettings = builder.Configuration
-            .GetSection(typeof(InMemorySettings).Name).Get<InMemorySettings>();
-
+        // Register In-Memory context
         services.AddDbContext<InMemoryDbContext>(options =>
-            options.UseInMemoryDatabase(inMemorySettings!.DatabaseName));
+        {
+            var inMemorySettings = builder.Configuration.GetSection(typeof(InMemorySettings).Name).Get<InMemorySettings>();
+            options.UseInMemoryDatabase(inMemorySettings!.DatabaseName);
+        });
 
-        // Register settings for mongodb context
-        var mongoDbSettings = builder.Configuration
-            .GetSection(typeof(MongoDbSettings).Name).Get<MongoDbSettings>();
-        
-        services.AddDbContext<MongoDbContext>(options => 
-            options.UseMongoDB(mongoDbSettings!.AtlasURI, mongoDbSettings.DatabaseName));
+        // Register MongoDB context
+        services.AddDbContext<MongoDbContext>(options =>
+        {
+            var mongoDbSettings = builder.Configuration.GetSection(typeof(MongoDbSettings).Name).Get<MongoDbSettings>();
+            options.UseMongoDB(mongoDbSettings!.AtlasURI, mongoDbSettings.DatabaseName);
+        });
 
-        // Register settings for pgsqldb context
-        var pgsqlSettings = builder.Configuration
-            .GetSection(typeof(PgsqlDbSettings).Name).Get<PgsqlDbSettings>();
-        
+        // Register PostgreSQL context
         services.AddDbContext<PostgreSqlDbContext>(options =>
-            options.UseNpgsql(pgsqlSettings!.ConnectionString));
+        {
+            var pgsqlSettings = builder.Configuration.GetSection(typeof(PgsqlDbSettings).Name).Get<PgsqlDbSettings>();
+            options.UseNpgsql(pgsqlSettings!.ConnectionString);
+        });
 
-        // Register srevice, factory and UoW
+        // Register services, factories, and Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IDbContextFactory, DbContextFactory>();

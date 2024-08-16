@@ -14,6 +14,7 @@ dotnet add package Microsoft.EntityFrameworkCore
 dotnet add package Microsoft.EntityFrameworkCore.Design
 dotnet add package MongoDB.EntityFrameworkCore
 dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
+dotnet add package Microsoft.EntityFrameworkCore.InMemory
 ```
 
 Some api request and response for this project. Here are some examples

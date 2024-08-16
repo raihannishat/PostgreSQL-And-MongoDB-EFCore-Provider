@@ -2,9 +2,10 @@
 
 public class UnitOfWork : IUnitOfWork, IDisposable
 {
+    private bool _isDisposed;
     private readonly IDbContext _context;
     private readonly IRepositoryFactory _repositoryFactory;
-    private readonly Dictionary<Type, object> _repositories = new();
+    private readonly ConcurrentDictionary<Type, object> _repositories = new();
 
     public UnitOfWork(IDbContextFactory dbContextFactory, IRepositoryFactory repositoryFactory)
     {
@@ -16,12 +17,8 @@ public class UnitOfWork : IUnitOfWork, IDisposable
     {
         var type = typeof(T);
 
-        if (!_repositories.ContainsKey(type))
-        {
-            _repositories[type] = _repositoryFactory.CreateRepository<T>(_context);
-        }
-
-        return (IRepository<T>)_repositories[type];
+        return (IRepository<T>)_repositories
+            .GetOrAdd(type, _ => _repositoryFactory.CreateRepository<T>(_context));
     }
 
     public async Task<int> CommitChangesAsync()
@@ -31,8 +28,12 @@ public class UnitOfWork : IUnitOfWork, IDisposable
 
     public void Dispose()
     {
-        _repositories.Clear();
-        _context.DisposeConnection();
-        GC.SuppressFinalize(this);
+        if (!_isDisposed)
+        {
+            _repositories.Clear();
+            _context.Dispose();
+            _isDisposed = true;
+            GC.SuppressFinalize(this);
+        }
     }
 }

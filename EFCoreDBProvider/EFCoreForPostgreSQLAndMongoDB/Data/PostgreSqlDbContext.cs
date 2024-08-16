@@ -27,13 +27,10 @@ public class PostgreSqlDbContext : DbContext, IDbContext
         return base.SaveChangesAsync();
     }
 
-    public void DisposeConnection()
-    {
-        base.Dispose();
-    }
-
     public DbSet<T> GetDbSet<T>() where T : class, IEntity
     {
         return Set<T>();
     }
+
+    public override void Dispose() => base.Dispose();
 }

@@ -25,13 +25,10 @@ public class MongoDbContext : DbContext, IDbContext
         return base.Set<T>();
     }
 
-    public void DisposeConnection()
-    {
-        base.Dispose();
-    }
-
     public Task<int> CommitChangesAsync()
     {
         return base.SaveChangesAsync();
     }
+
+    public override void Dispose() => base.Dispose();
 }

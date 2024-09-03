@@ -11,6 +11,7 @@ global using EFCoreForPostgreSQLAndMongoDB.Settings;
 // Microsoft Entity Framework Core Namespaces
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore.Metadata.Builders;
+global using Microsoft.EntityFrameworkCore.Storage;
 
 // ASP.NET Core Namespaces
 global using Microsoft.Extensions.Options;

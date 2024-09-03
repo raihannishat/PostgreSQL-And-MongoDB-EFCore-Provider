@@ -11,21 +11,48 @@ public class UserService : IUserService
 
     public async Task AddUserAsync(User user)
     {
-        if (user != null)
+        if (user == null) throw new ArgumentNullException(nameof(user));
+
+        await _unitOfWork.BeginTransactionAsync(); // Start a transaction
+
+        try
         {
             await _unitOfWork.GetRepository<User>().AddAsync(user);
             await _unitOfWork.CommitChangesAsync();
+            await _unitOfWork.CommitTransactionAsync(); // Commit the transaction
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(); // Rollback the transaction on failure
+            throw new InvalidOperationException("Failed to add user.", ex); // Throw a detailed exception
         }
     }
 
     public async Task DeleteUserAsync(string id)
     {
-        var existingUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(id);
+        if (string.IsNullOrEmpty(id)) throw new ArgumentException("User ID cannot be null or empty.", nameof(id));
 
-        if (existingUser != null)
+        await _unitOfWork.BeginTransactionAsync(); // Start a transaction
+
+        try
         {
-            _unitOfWork.GetRepository<User>().Delete(existingUser);
-            await _unitOfWork.CommitChangesAsync();
+            var existingUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(id);
+
+            if (existingUser != null)
+            {
+                _unitOfWork.GetRepository<User>().Delete(existingUser);
+                await _unitOfWork.CommitChangesAsync();
+                await _unitOfWork.CommitTransactionAsync(); // Commit the transaction
+            }
+            else
+            {
+                throw new KeyNotFoundException($"User with ID '{id}' not found.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(); // Rollback the transaction on failure
+            throw new InvalidOperationException("Failed to delete user.", ex); // Throw a detailed exception
         }
     }
 
@@ -36,68 +63,130 @@ public class UserService : IUserService
 
     public async Task<User> GetUserByIdAsync(string id)
     {
+        if (string.IsNullOrEmpty(id)) throw new ArgumentException("User ID cannot be null or empty.", nameof(id));
+
         var existingUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(id);
 
-        return existingUser ?? throw new KeyNotFoundException($"Entity with ID '{id}' not found.");
+        return existingUser ?? throw new KeyNotFoundException($"User with ID '{id}' not found.");
     }
 
     public async Task<IEnumerable<User>> SearchUserAsync(Expression<Func<User, bool>> predicate)
     {
-        var existingUser = await _unitOfWork.GetRepository<User>().FindAsync(predicate);
+        var users = await _unitOfWork.GetRepository<User>().FindAsync(predicate);
 
-        return existingUser ?? throw new KeyNotFoundException($"Entity not found.");
+        return users ?? throw new KeyNotFoundException("No users found matching the criteria.");
     }
 
     public async Task UpdateUserAsync(User user)
     {
-        var existingUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(user.Id);
+        ArgumentNullException.ThrowIfNull(user);
 
-        if (existingUser != null)
+        await _unitOfWork.BeginTransactionAsync(); // Start a transaction
+
+        try
         {
-            existingUser.Name = user.Name;
-            existingUser.Email = user.Email;
-            existingUser.Address = user.Address;
-            existingUser.Contacts = user.Contacts;
-            _unitOfWork.GetRepository<User>().Update(existingUser);
-            await _unitOfWork.CommitChangesAsync();
+            var existingUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(user.Id);
+
+            if (existingUser != null)
+            {
+                existingUser.Name = user.Name;
+                existingUser.Email = user.Email;
+                existingUser.Address = user.Address;
+                existingUser.Contacts = user.Contacts;
+                _unitOfWork.GetRepository<User>().Update(existingUser);
+                await _unitOfWork.CommitChangesAsync();
+                await _unitOfWork.CommitTransactionAsync(); // Commit the transaction
+            }
+            else
+            {
+                throw new KeyNotFoundException($"User with ID '{user.Id}' not found.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(); // Rollback the transaction on failure
+            throw new InvalidOperationException("Failed to update user.", ex); // Throw a detailed exception
         }
     }
 
     public async Task<IEnumerable<Phone>> GetUserPhoneNumberByIdAsync(string id)
     {
-        var user = await GetUserByIdAsync(id)
-            ?? throw new KeyNotFoundException($"User with ID '{id}' not found.");
+        if (string.IsNullOrEmpty(id)) throw new ArgumentException("User ID cannot be null or empty.", nameof(id));
 
-        return [.. user.Contacts!];
+        var user = await GetUserByIdAsync(id);
+
+        return user.Contacts ?? Enumerable.Empty<Phone>(); // Return empty if Contacts is null
     }
 
     public async Task<Address> GetUserAddressByIdAsync(string id)
     {
-        var user = await GetUserByIdAsync(id)
-            ?? throw new KeyNotFoundException($"User profile with ID '{id}' not found.");
+        if (string.IsNullOrEmpty(id)) throw new ArgumentException("User ID cannot be null or empty.", nameof(id));
 
-        return user.Address!;
+        var user = await GetUserByIdAsync(id);
+
+        return user.Address ?? throw new KeyNotFoundException($"Address for user with ID '{id}' not found.");
     }
 
     public async Task AddAddressAsync(string id, Address address)
     {
-        var existingUser = await GetUserByIdAsync(id);
+        if (string.IsNullOrEmpty(id)) throw new ArgumentException("User ID cannot be null or empty.", nameof(id));
+        ArgumentNullException.ThrowIfNull(address);
 
-        if (existingUser != null)
+        await _unitOfWork.BeginTransactionAsync(); // Start a transaction
+
+        try
         {
-            existingUser.Address = address;
-            await _unitOfWork.CommitChangesAsync();
+            var existingUser = await GetUserByIdAsync(id);
+
+            if (existingUser != null)
+            {
+                existingUser.Address = address;
+                await _unitOfWork.CommitChangesAsync();
+                await _unitOfWork.CommitTransactionAsync(); // Commit the transaction
+            }
+            else
+            {
+                throw new KeyNotFoundException($"User with ID '{id}' not found.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(); // Rollback the transaction on failure
+            throw new InvalidOperationException("Failed to add address.", ex); // Throw a detailed exception
         }
     }
 
     public async Task AddPhoneNumberAsync(string id, Phone phone)
     {
-        var existingUser = await GetUserByIdAsync(id);
-
-        if (existingUser != null)
+        if (string.IsNullOrEmpty(id))
         {
-            existingUser.Contacts!.Add(phone);
-            await _unitOfWork.CommitChangesAsync();
+            throw new ArgumentException("User ID cannot be null or empty.", nameof(id));
+        }
+
+        ArgumentNullException.ThrowIfNull(phone);
+
+        await _unitOfWork.BeginTransactionAsync(); // Start a transaction
+
+        try
+        {
+            var existingUser = await GetUserByIdAsync(id);
+
+            if (existingUser != null)
+            {
+                existingUser.Contacts ??= new List<Phone>(); // Initialize Contacts if null
+                existingUser.Contacts.Add(phone);
+                await _unitOfWork.CommitChangesAsync();
+                await _unitOfWork.CommitTransactionAsync(); // Commit the transaction
+            }
+            else
+            {
+                throw new KeyNotFoundException($"User with ID '{id}' not found.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(); // Rollback the transaction on failure
+            throw new InvalidOperationException("Failed to add phone number.", ex); // Throw a detailed exception
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace EFCoreForPostgreSQLAndMongoDB.Repositories;
 
-public class UnitOfWork : IUnitOfWork
+public class UnitOfWork : IUnitOfWork, IDisposable
 {
     private readonly IDbContext _context;
     private readonly IRepositoryFactory _repositoryFactory;
@@ -16,13 +16,27 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task BeginTransactionAsync()
     {
-        if (_currentTransaction == null)
-        {
-            _currentTransaction = await _context.BeginTransactionAsync();
-        }
+        _currentTransaction ??= await _context.BeginTransactionAsync();
     }
 
     public async Task CommitTransactionAsync()
+    {
+        await EnsureTransactionAsync(async () =>
+        {
+            await _context.CommitChangesAsync();
+            await _currentTransaction!.CommitAsync();
+        });
+    }
+
+    public async Task RollbackTransactionAsync()
+    {
+        await EnsureTransactionAsync(async () =>
+        {
+            await _currentTransaction!.RollbackAsync();
+        });
+    }
+
+    private async Task EnsureTransactionAsync(Func<Task> transactionAction)
     {
         if (_currentTransaction == null)
         {
@@ -31,8 +45,7 @@ public class UnitOfWork : IUnitOfWork
 
         try
         {
-            await _context.CommitChangesAsync();
-            await _currentTransaction.CommitAsync();
+            await transactionAction();
         }
         catch
         {
@@ -42,21 +55,6 @@ public class UnitOfWork : IUnitOfWork
         finally
         {
             await DisposeTransactionAsync();
-        }
-    }
-
-    public async Task RollbackTransactionAsync()
-    {
-        if (_currentTransaction != null)
-        {
-            try
-            {
-                await _currentTransaction.RollbackAsync();
-            }
-            finally
-            {
-                await DisposeTransactionAsync();
-            }
         }
     }
 
@@ -71,13 +69,17 @@ public class UnitOfWork : IUnitOfWork
 
     public IRepository<T> GetRepository<T>() where T : class, IEntity
     {
-        var type = typeof(T);
-        return (IRepository<T>)_repositories.GetOrAdd(type, _ => 
+        return (IRepository<T>)_repositories.GetOrAdd(typeof(T), _ =>
             _repositoryFactory.CreateRepository<T>(_context));
     }
 
     public async Task<int> CommitChangesAsync()
     {
+        if (_currentTransaction != null)
+        {
+            throw new InvalidOperationException("CommitChangesAsync should not be called directly when a transaction is active.");
+        }
+
         return await _context.CommitChangesAsync();
     }
 
@@ -89,27 +91,24 @@ public class UnitOfWork : IUnitOfWork
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_isDisposed)
+        if (_isDisposed) return;
+
+        if (disposing)
         {
-            if (disposing)
+            _repositories.Clear();
+            _context.Dispose();
+
+            try
             {
-                _repositories.Clear();
-                _context.Dispose();
-
-                // Dispose of any remaining transactions
-                try
-                {
-                    // Use Task.Run to call async method in sync context
-                    Task.Run(async () => await DisposeTransactionAsync()).GetAwaiter().GetResult();
-                }
-                catch (Exception ex)
-                {
-                    // Log the exception or handle it accordingly
-                    Console.WriteLine($"Exception during Dispose: {ex.Message}");
-                }
+                Task.Run(DisposeTransactionAsync).GetAwaiter().GetResult();
             }
-
-            _isDisposed = true;
+            catch (Exception ex)
+            {
+                // Log the exception or handle it accordingly
+                Console.WriteLine($"Exception during Dispose: {ex.Message}");
+            }
         }
+
+        _isDisposed = true;
     }
 }
